@@ -1,0 +1,73 @@
+{
+  "Comment": "Qumulo Node Scale-Out Workflow",
+  "StartAt": "StartLambdaExecution",
+  "States": {
+    "StartLambdaExecution": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "<ARN OF YOUR LAMBDA FUNCTION>",
+        "Payload": {
+          "action": "scale_out"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.Unknown"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.SsmResult",
+      "Next": "Wait15Seconds"
+    },
+    "Wait15Seconds": {
+      "Type": "Wait",
+      "Seconds": 15,
+      "Next": "GetSSMStatus"
+    },
+    "GetSSMStatus": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:ssm:getCommandInvocation",
+      "Parameters": {
+        "CommandId.$": "$.SsmResult.Payload.command_id",
+        "InstanceId": "<PROVIDE INSTANCE ID WHERE YOUR CNQ TERRAFROM IS RUNNING>"
+      },
+      "ResultPath": "$.SsmStatus",
+      "Next": "CheckSSMStatus"
+    },
+    "CheckSSMStatus": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.SsmStatus.Status",
+          "StringEquals": "Success",
+          "Next": "Succeeded"
+        },
+        {
+          "Variable": "$.SsmStatus.Status",
+          "StringEquals": "Failed",
+          "Next": "Failed"
+        },
+        {
+          "Variable": "$.SsmStatus.Status",
+          "StringEquals": "Cancelled",
+          "Next": "Failed"
+        }
+      ],
+      "Default": "Wait15Seconds"
+    },
+    "Succeeded": {
+      "Type": "Succeed"
+    },
+    "Failed": {
+      "Type": "Fail"
+    }
+  }
+}
