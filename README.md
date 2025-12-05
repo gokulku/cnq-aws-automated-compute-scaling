@@ -42,8 +42,8 @@ This project enables scheduled scaling (add/remove EC2 nodes) for a Qumulo cloud
    - Use EventBridge Scheduler to trigger Step Functions per schedule (cron or rate).  
    - Optionally set retry policy, DLQ, time windows.  
 
-4. Test manually:
-   - Trigger workflow via console/CLI.  
+4. Test:
+   - Trigger workflow via Eventbridge/lambda directly to validate.  
    - Verify EC2 nodes are added or removed correctly.  
    - Check CloudWatch logs and Terraform output.  
 
